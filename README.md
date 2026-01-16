@@ -1335,13 +1335,20 @@ user-select: none;
     box-shadow: 0 0 0 2px rgba(6, 109, 77, 0.2);
 }
 
-/* منع النص من دفع المربع للتمدد */
+/* منع النص من دفع المربع للتمدد - تم تعديلها */
 #subjectBox,
 #lessonBox{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 5px;
+  transition: all 0.3s ease;
 }
 </style>
 </head>
@@ -2283,6 +2290,108 @@ function updateManualTitle() {
     updateReport();
 }
 
+// ==================== دالة تكيف الخطوط المضافة ====================
+function adaptSubjectLessonFont() {
+  const elements = [
+    document.getElementById('subjectBox'),
+    document.getElementById('lessonBox')
+  ];
+
+  elements.forEach(el => {
+    if (!el || !el.parentElement) return;
+
+    const text = el.innerText.trim();
+    const textLength = text.length; // استخدام عدد الأحرف بدلاً من الكلمات
+    const container = el.parentElement; // العنصر الحاوي
+    const containerWidth = container.clientWidth - 30; // نطرح هامش داخلي
+    const containerHeight = container.clientHeight - 20; // نطرح هامش عمودي
+
+    // إزالة أي محاذاة أو تكرار سابق
+    el.style.whiteSpace = 'nowrap';
+    el.style.overflow = 'hidden';
+    el.style.textOverflow = 'ellipsis';
+    el.style.textAlign = 'center';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.padding = '0 5px';
+    el.style.width = '100%';
+    el.style.height = '100%';
+
+    // قواعد تكيف الخط بناءً على طول النص وعرض الحاوية
+    let fontSize, fontWeight, lineHeight;
+    
+    // حالة النص الفارغ
+    if (!text || text === 'غير محدد' || textLength === 0) {
+      el.style.fontSize = '11px';
+      el.style.fontWeight = '600';
+      el.style.lineHeight = '1.2';
+      return;
+    }
+
+    // حساب نسبة ملء النص في الحاوية
+    const approxCharWidth = 7; // عرض تقريبي لكل حرف
+    const approxTextWidth = textLength * approxCharWidth;
+    const widthRatio = approxTextWidth / containerWidth;
+    
+    if (widthRatio > 2.0) {
+      // النص طويل جداً
+      fontSize = '7px';
+      fontWeight = '600';
+      lineHeight = '1.0';
+      el.style.whiteSpace = 'normal';
+      el.style.overflow = 'hidden';
+      el.style.display = '-webkit-box';
+      el.style.WebkitLineClamp = '2';
+      el.style.WebkitBoxOrient = 'vertical';
+    } else if (widthRatio > 1.2) {
+      // النص طويل
+      fontSize = '8px';
+      fontWeight = '600';
+      lineHeight = '1.1';
+    } else if (widthRatio > 0.8) {
+      // النص متوسط
+      fontSize = '9px';
+      fontWeight = '700';
+      lineHeight = '1.2';
+    } else if (widthRatio > 0.5) {
+      // النص مناسب
+      fontSize = '10px';
+      fontWeight = '800';
+      lineHeight = '1.3';
+    } else {
+      // النص قصير
+      fontSize = '12px';
+      fontWeight = '900';
+      lineHeight = '1.4';
+    }
+
+    // ضبط للارتفاع
+    if (containerHeight < 30) {
+      fontSize = Math.min(parseInt(fontSize), 9) + 'px';
+      lineHeight = '1.1';
+    }
+
+    // تطبيق التنسيقات
+    el.style.fontSize = fontSize;
+    el.style.fontWeight = fontWeight;
+    el.style.lineHeight = lineHeight;
+  });
+}
+
+// دالة للمحاولة مرة أخرى بعد فترة قصيرة
+function adaptSubjectLessonFontWithRetry() {
+  adaptSubjectLessonFont();
+  
+  // المحاولة مرة أخرى بعد 100 مللي ثانية لضمان تحميل الأبعاد
+  setTimeout(adaptSubjectLessonFont, 100);
+  
+  // محاولة ثانية بعد تحميل الصفحة بالكامل
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', adaptSubjectLessonFont);
+  }
+}
+
 // ==================== دالة تحديث التاريخ اليدوي المعدلة ====================
 async function updateManualDate() {
     const manualDate = document.getElementById('manualDateInput').value;
@@ -2370,6 +2479,9 @@ function updateReport(){
     
     // تحديث الأدوات والوسائل التعليمية
     updateToolsDisplay();
+    
+    // استدعاء دالة تكيف الخطوط بعد التحديث
+    setTimeout(adaptSubjectLessonFontWithRetry, 10);
 }
 
 function getReportTypeText() {
@@ -3163,6 +3275,21 @@ window.onload = function() {
     const loadingIndicator = document.createElement('div');
     loadingIndicator.className = 'ai-loading-indicator';
     aiButton.appendChild(loadingIndicator);
+    
+    // إضافة مستمعات لأحداث تكيف الخطوط
+    window.addEventListener('resize', adaptSubjectLessonFont);
+    
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'subject' || e.target.id === 'lesson') {
+            setTimeout(adaptSubjectLessonFont, 50);
+        }
+    });
+    
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('select, input[type="text"], input[type="file"]')) {
+            setTimeout(adaptSubjectLessonFont, 100);
+        }
+    });
 }
 </script>
 
